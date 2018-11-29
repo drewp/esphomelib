@@ -16,6 +16,7 @@ namespace sensor {
 
 enum PMSX003Type {
   PMSX003_TYPE_X003 = 0,
+  PMSX003_TYPE_5003,
   PMSX003_TYPE_5003T,
   PMSX003_TYPE_5003ST,
 };
@@ -62,7 +63,7 @@ class PMSX003Component : public UARTDevice, public Component {
   PMSX003Sensor *make_formaldehyde_sensor(const std::string &name);
 
  protected:
-  optional<bool> check_byte_();
+  optional<bool> check_byte_(); // true: keep going; false: errored; none: packet complete.
   void parse_data_();
   uint16_t get_16_bit_uint_(uint8_t start_index);
 

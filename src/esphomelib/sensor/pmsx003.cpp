@@ -62,11 +62,18 @@ optional<bool> PMSX003Component::check_byte_() {
   if (index == 3) {
     bool length_matches = false;
     switch (this->type_) {
-      case PMSX003_TYPE_X003:length_matches = payload_length == 13 || payload_length == 9;
+      case PMSX003_TYPE_X003:
+        length_matches = payload_length == 13 || payload_length == 9;
         break;
-      case PMSX003_TYPE_5003T:length_matches = payload_length == 13;
+      case PMSX003_TYPE_5003:
+        // PMS5003 returns payload_length in bytes not words.
+        length_matches = payload_length == 28;
         break;
-      case PMSX003_TYPE_5003ST:length_matches = payload_length == 17;
+      case PMSX003_TYPE_5003T:
+        length_matches = payload_length == 13;
+        break;
+      case PMSX003_TYPE_5003ST:
+        length_matches = payload_length == 17;
         break;
     }
 
@@ -79,6 +86,10 @@ optional<bool> PMSX003Component::check_byte_() {
 
   // start (16bit) + length (16bit) + DATA (16bit) + checksum (16bit)
   uint8_t total_size = 4 + payload_length * 2 + 2;
+
+  if (this->type_ == PMSX003_TYPE_5003) {
+    total_size = 32;
+  }
 
   if (index < total_size - 1)
     return true;
@@ -105,6 +116,34 @@ void PMSX003Component::parse_data_() {
       uint16_t pm_10_0_concentration = this->get_16_bit_uint_(14);
       ESP_LOGD(TAG, "Got PM1.0 Concentration: %u µg/m^3, PM2.5 Concentration %u µg/m^3, PM10.0 Concentration: %u µg/m^3",
           pm_1_0_concentration, pm_2_5_concentration, pm_10_0_concentration);
+      if (this->pm_1_0_sensor_ != nullptr)
+        this->pm_1_0_sensor_->publish_state(pm_1_0_concentration);
+      if (this->pm_2_5_sensor_ != nullptr)
+        this->pm_2_5_sensor_->publish_state(pm_2_5_concentration);
+      if (this->pm_10_0_sensor_ != nullptr)
+        this->pm_10_0_sensor_->publish_state(pm_10_0_concentration);
+      break;
+    }
+    case PMSX003_TYPE_5003: {
+      uint16_t pm_1_0_concentration = this->get_16_bit_uint_(4);
+      uint16_t pm_2_5_concentration = this->get_16_bit_uint_(6);
+      uint16_t pm_10_0_concentration = this->get_16_bit_uint_(8);
+      ESP_LOGD(TAG, "Got standard particle concentration [µg/m^3]: PM1.0=%u PM2.5=%u PM10.0=%u",
+          pm_1_0_concentration, pm_2_5_concentration, pm_10_0_concentration);
+
+      ESP_LOGD(TAG, "Got atmospheric conditions particle concentrations [µg/m^3]: PM1.0=%u PM2.5=%u PM10.0=%u",
+          this->get_16_bit_uint_(10),
+          this->get_16_bit_uint_(12),
+          this->get_16_bit_uint_(14));
+
+      ESP_LOGD(TAG, "Got counts in #/cm^3 for particles bigger than 0.3µm=%u 0.5µm=%u 1.0µm=%u 2.5µm=%u 5µm=%u 10µm=%u",
+          this->get_16_bit_uint_(16),
+          this->get_16_bit_uint_(18),
+          this->get_16_bit_uint_(20),
+          this->get_16_bit_uint_(22),
+          this->get_16_bit_uint_(24),
+          this->get_16_bit_uint_(26));
+
       if (this->pm_1_0_sensor_ != nullptr)
         this->pm_1_0_sensor_->publish_state(pm_1_0_concentration);
       if (this->pm_2_5_sensor_ != nullptr)
