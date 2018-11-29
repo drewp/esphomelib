@@ -22,6 +22,10 @@ void PMSX003Component::loop() {
     return;
 
   this->last_transmission_ = now;
+  if (!this->any_transmission_) {
+    ESP_LOGI(TAG, "Data received");
+    this->any_transmission_= true;
+  }
   while (this->available() != 0) {
     this->read_byte(&this->data_[this->data_index_]);
     auto check = this->check_byte_();
@@ -67,7 +71,7 @@ optional<bool> PMSX003Component::check_byte_() {
     }
 
     if (!length_matches) {
-      ESP_LOGW(TAG, "PMSX003 length doesn't match. Are you using the correct PMSX003 type?");
+      ESP_LOGW(TAG, "PMSX003 length %d doesn't match. Are you using the correct PMSX003 type?", payload_length);
       return false;
     }
     return true;

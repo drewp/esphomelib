@@ -69,6 +69,7 @@ class PMSX003Component : public UARTDevice, public Component {
   uint8_t data_[64];
   uint8_t data_index_{0};
   uint32_t last_transmission_{0};
+  bool any_transmission_;
   const PMSX003Type type_;
   PMSX003Sensor *pm_1_0_sensor_{nullptr};
   PMSX003Sensor *pm_2_5_sensor_{nullptr};
